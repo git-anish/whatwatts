@@ -457,21 +457,27 @@ private final class PreferencesWindowController: NSWindowController {
     private let onApply: () -> Void
 
     private let alwaysLiveCheckbox = NSButton(checkboxWithTitle: "Always live updates", target: nil, action: nil)
-    private let showAdapterWhenUnpluggedCheckbox = NSButton(checkboxWithTitle: "Show 0W adapter when unplugged", target: nil, action: nil)
-    private let liveIntervalField = NSTextField(string: "")
-    private let burstDurationField = NSTextField(string: "")
-    private let idleIntervalField = NSTextField(string: "")
+    private let showAdapterWhenUnpluggedCheckbox = NSButton(checkboxWithTitle: "Show adapter when unplugged", target: nil, action: nil)
+
+    private let liveIntervalValueLabel = NSTextField(labelWithString: "")
+    private let burstDurationValueLabel = NSTextField(labelWithString: "")
+    private let idleIntervalValueLabel = NSTextField(labelWithString: "")
+
+    private let liveIntervalStepper = NSStepper()
+    private let burstDurationStepper = NSStepper()
+    private let idleIntervalStepper = NSStepper()
 
     init(onApply: @escaping () -> Void) {
         self.onApply = onApply
 
-        let contentRect = NSRect(x: 0, y: 0, width: 420, height: 250)
+        let contentRect = NSRect(x: 0, y: 0, width: 440, height: 320)
         let window = NSWindow(contentRect: contentRect,
                               styleMask: [.titled, .closable],
                               backing: .buffered,
                               defer: false)
-        window.title = "WhatWatt Preferences"
+        window.title = "whatwatts Settings"
         window.isReleasedWhenClosed = false
+        window.center()
 
         super.init(window: window)
         window.contentView = makeContentView()
@@ -487,71 +493,106 @@ private final class PreferencesWindowController: NSWindowController {
         let configuration = AppConfiguration.current()
         alwaysLiveCheckbox.state = configuration.alwaysLiveUpdates ? .on : .off
         showAdapterWhenUnpluggedCheckbox.state = configuration.showAdapterWhenUnplugged ? .on : .off
-        liveIntervalField.stringValue = formatNumber(configuration.liveUpdateInterval)
-        burstDurationField.stringValue = formatNumber(configuration.liveBurstDuration)
-        idleIntervalField.stringValue = formatNumber(configuration.idleUpdateInterval)
+
+        liveIntervalStepper.doubleValue = configuration.liveUpdateInterval
+        burstDurationStepper.doubleValue = configuration.liveBurstDuration
+        idleIntervalStepper.doubleValue = configuration.idleUpdateInterval
+
+        syncValueLabels()
     }
 
     private func makeContentView() -> NSView {
-        let numberFormatter = NumberFormatter()
-        numberFormatter.minimum = 1
-        numberFormatter.maximumFractionDigits = 0
-        numberFormatter.allowsFloats = false
+        configureStepper(liveIntervalStepper, action: #selector(stepperChanged(_:)), min: 1, max: 10, increment: 1)
+        configureStepper(burstDurationStepper, action: #selector(stepperChanged(_:)), min: 5, max: 300, increment: 5)
+        configureStepper(idleIntervalStepper, action: #selector(stepperChanged(_:)), min: 10, max: 300, increment: 5)
 
-        [liveIntervalField, burstDurationField, idleIntervalField].forEach {
-            $0.formatter = numberFormatter
-            $0.alignment = .right
-        }
+        alwaysLiveCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
+        showAdapterWhenUnpluggedCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
 
-        let helpLabel = NSTextField(labelWithString: "Default behavior is low power mode: refresh every 60 seconds, switch to 1-second updates for 20 seconds after a charger-state change.")
-        helpLabel.lineBreakMode = .byWordWrapping
-        helpLabel.maximumNumberOfLines = 3
-        helpLabel.textColor = .secondaryLabelColor
+        let titleLabel = NSTextField(labelWithString: "Update behavior")
+        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
 
-        let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Live interval (sec)"), liveIntervalField],
-            [NSTextField(labelWithString: "Burst duration (sec)"), burstDurationField],
-            [NSTextField(labelWithString: "Idle interval (sec)"), idleIntervalField],
+        let subtitleLabel = NSTextField(labelWithString: "Fast when charger state changes, quiet when nothing is happening.")
+        subtitleLabel.textColor = .secondaryLabelColor
+        subtitleLabel.lineBreakMode = .byWordWrapping
+        subtitleLabel.maximumNumberOfLines = 2
+
+        let displayLabel = sectionLabel("Display")
+        let refreshLabel = sectionLabel("Refresh cadence")
+
+        let explanationLabel = NSTextField(labelWithString: "Default mode refreshes every 60 seconds and switches to 1-second updates for 20 seconds after a charger event.")
+        explanationLabel.textColor = .secondaryLabelColor
+        explanationLabel.lineBreakMode = .byWordWrapping
+        explanationLabel.maximumNumberOfLines = 3
+
+        let displayCard = cardStack([alwaysLiveCheckbox, showAdapterWhenUnpluggedCheckbox])
+
+        let intervalGrid = NSGridView(views: [
+            [metricLabel("Live interval"), valueControlRow(label: liveIntervalValueLabel, stepper: liveIntervalStepper)],
+            [metricLabel("Burst duration"), valueControlRow(label: burstDurationValueLabel, stepper: burstDurationStepper)],
+            [metricLabel("Idle interval"), valueControlRow(label: idleIntervalValueLabel, stepper: idleIntervalStepper)],
         ])
-        grid.rowSpacing = 10
-        grid.columnSpacing = 16
-        grid.xPlacement = .fill
+        intervalGrid.rowSpacing = 12
+        intervalGrid.columnSpacing = 18
+        intervalGrid.yPlacement = .center
+
+        let refreshCard = cardStack([explanationLabel, intervalGrid])
 
         let saveButton = NSButton(title: "Save", target: self, action: #selector(savePreferences(_:)))
+        saveButton.bezelStyle = .rounded
+        saveButton.keyEquivalent = "\r"
+
         let resetButton = NSButton(title: "Reset Defaults", target: self, action: #selector(resetDefaults(_:)))
-        let buttonRow = NSStackView(views: [resetButton, saveButton])
+        resetButton.bezelStyle = .rounded
+
+        let spacer = NSView()
+        let buttonRow = NSStackView(views: [spacer, resetButton, saveButton])
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 10
         buttonRow.alignment = .centerY
 
-        let stack = NSStackView(views: [helpLabel, alwaysLiveCheckbox, showAdapterWhenUnpluggedCheckbox, grid, buttonRow])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 14
-        stack.edgeInsets = NSEdgeInsets(top: 18, left: 20, bottom: 18, right: 20)
+        let content = NSStackView(views: [
+            titleLabel,
+            subtitleLabel,
+            displayLabel,
+            displayCard,
+            refreshLabel,
+            refreshCard,
+            buttonRow,
+        ])
+        content.orientation = .vertical
+        content.alignment = .leading
+        content.spacing = 12
+        content.edgeInsets = NSEdgeInsets(top: 24, left: 24, bottom: 20, right: 24)
 
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 420, height: 250))
-        container.addSubview(stack)
-        stack.translatesAutoresizingMaskIntoConstraints = false
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 440, height: 320))
+        container.addSubview(content)
+        content.translatesAutoresizingMaskIntoConstraints = false
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: container.topAnchor),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor),
-            liveIntervalField.widthAnchor.constraint(equalToConstant: 80),
-            burstDurationField.widthAnchor.constraint(equalToConstant: 80),
-            idleIntervalField.widthAnchor.constraint(equalToConstant: 80),
+            content.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            content.topAnchor.constraint(equalTo: container.topAnchor),
+            content.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor),
+            spacer.widthAnchor.constraint(greaterThanOrEqualToConstant: 24),
+            displayCard.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -content.edgeInsets.left - content.edgeInsets.right),
+            refreshCard.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -content.edgeInsets.left - content.edgeInsets.right),
         ])
 
         return container
     }
 
+    @objc private func stepperChanged(_ sender: NSStepper) {
+        syncValueLabels()
+    }
+
     @objc private func savePreferences(_ sender: Any?) {
         defaults.set(alwaysLiveCheckbox.state == .on, forKey: DefaultsKey.alwaysLiveUpdates)
         defaults.set(showAdapterWhenUnpluggedCheckbox.state == .on, forKey: DefaultsKey.showAdapterWhenUnplugged)
-        defaults.set(sanitizedValue(from: liveIntervalField, min: 1, max: 10, fallback: 1), forKey: DefaultsKey.liveUpdateInterval)
-        defaults.set(sanitizedValue(from: burstDurationField, min: 5, max: 300, fallback: 20), forKey: DefaultsKey.liveBurstDuration)
-        defaults.set(sanitizedValue(from: idleIntervalField, min: 10, max: 300, fallback: 60), forKey: DefaultsKey.idleUpdateInterval)
+        defaults.set(liveIntervalStepper.doubleValue, forKey: DefaultsKey.liveUpdateInterval)
+        defaults.set(burstDurationStepper.doubleValue, forKey: DefaultsKey.liveBurstDuration)
+        defaults.set(idleIntervalStepper.doubleValue, forKey: DefaultsKey.idleUpdateInterval)
         reloadFromDefaults()
         onApply()
     }
@@ -566,12 +607,73 @@ private final class PreferencesWindowController: NSWindowController {
         onApply()
     }
 
-    private func sanitizedValue(from field: NSTextField, min minValue: Double, max maxValue: Double, fallback: Double) -> Double {
-        guard let value = Double(field.stringValue), value.isFinite else { return fallback }
-        return Swift.min(maxValue, Swift.max(minValue, value))
+    private func configureStepper(_ stepper: NSStepper, action: Selector, min: Double, max: Double, increment: Double) {
+        stepper.target = self
+        stepper.action = action
+        stepper.minValue = min
+        stepper.maxValue = max
+        stepper.increment = increment
+        stepper.valueWraps = false
+        stepper.autorepeat = true
     }
 
-    private func formatNumber(_ value: Double) -> String {
-        String(Int(round(value)))
+    private func syncValueLabels() {
+        liveIntervalValueLabel.stringValue = valueString(liveIntervalStepper.doubleValue)
+        burstDurationValueLabel.stringValue = valueString(burstDurationStepper.doubleValue)
+        idleIntervalValueLabel.stringValue = valueString(idleIntervalStepper.doubleValue)
+    }
+
+    private func valueString(_ value: Double) -> String {
+        "\(Int(value)) sec"
+    }
+
+    private func sectionLabel(_ title: String) -> NSTextField {
+        let label = NSTextField(labelWithString: title.uppercased())
+        label.font = .systemFont(ofSize: 11, weight: .semibold)
+        label.textColor = .secondaryLabelColor
+        return label
+    }
+
+    private func metricLabel(_ title: String) -> NSTextField {
+        let label = NSTextField(labelWithString: title)
+        label.font = .systemFont(ofSize: 13)
+        return label
+    }
+
+    private func valueControlRow(label: NSTextField, stepper: NSStepper) -> NSStackView {
+        label.font = .monospacedDigitSystemFont(ofSize: 13, weight: .medium)
+        label.alignment = .right
+
+        let row = NSStackView(views: [label, stepper])
+        row.orientation = .horizontal
+        row.spacing = 10
+        row.alignment = .centerY
+
+        label.widthAnchor.constraint(equalToConstant: 64).isActive = true
+        return row
+    }
+
+    private func cardStack(_ views: [NSView]) -> NSView {
+        let stack = NSStackView(views: views)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 10
+        stack.edgeInsets = NSEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
+
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        container.layer?.cornerRadius = 12
+        container.addSubview(stack)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: container.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+
+        return container
     }
 }

@@ -1,63 +1,61 @@
-# WhatWatt Power Rate
+# whatwatts
 
-A lightweight macOS menu bar app that shows both:
-- adapter wattage requested from the charger
-- live battery charge or discharge rate
+whatwatts is a lightweight macOS menu bar app for answering one simple question: what is your Mac actually doing right now when you plug in a charger?
 
-This repo started from [SomeInterestingUserName/WhatWatt](https://github.com/SomeInterestingUserName/WhatWatt) by Jiawei Chen and keeps the original MIT license.
+It keeps the original WhatWatt idea of showing negotiated adapter wattage, and adds the missing half of the picture: live battery charge and discharge rate.
 
-## What changed
+Built on top of [SomeInterestingUserName/WhatWatt](https://github.com/SomeInterestingUserName/WhatWatt) by Jiawei Chen. The original MIT license is preserved. The upstream PR intentionally keeps the original app name; this public repo uses the `whatwatts` branding.
 
-This fork adds the behavior requested for day-to-day charger debugging:
-- battery charge and discharge rate in watts, derived from `AppleSmartBattery` current and voltage
-- event-driven low-power refresh behavior
-- default low-power mode: `60s` idle refresh
-- burst mode: `1s` refresh for `20s` after a real charger-state change
-- menu toggle for `Always Live Updates`
-- lightweight `Preferences...` window for tuning live interval, burst duration, and idle interval
-- cleaner menu bar title format such as `67W | ↑18.4W` while charging and `↓18.4W` when unplugged
-- optional `Show 0W adapter when unplugged` preference if you prefer the explicit adapter state in the menu bar
-- Intel-safe signed current handling for wrapped battery amperage values
+## Highlights
 
-## Why this exists
+- Shows adapter wattage and battery power flow in one compact menu bar item
+- Uses a clean title format like `67W | ↑18.4W` while charging and `↓18.4W` when unplugged
+- Defaults to a low-power refresh mode with fast updates only when charger state changes
+- Includes `Always Live Updates` for people who want continuous refreshes
+- Includes `Show 0W adapter when unplugged` if you prefer explicit adapter state in the menu bar
+- Adds a lightweight `Preferences...` window for tuning update behavior
+- Handles wrapped signed battery current values correctly on Intel Macs
 
-The original app is excellent for showing negotiated adapter wattage, but it does not expose the current battery power flow. This fork is aimed at people who want to answer questions like:
-- Is the battery actually charging right now?
-- At what rate is it charging or discharging?
-- Did plugging in this cable or charger change only the negotiated adapter wattage, or the real battery power flow too?
+## Why this fork exists
 
-## Telemetry caveat
+The original app is great at showing what the charger negotiated with macOS. This fork adds the part that is often more useful in practice: whether the battery is actually charging or discharging, and by how much.
 
-Battery power values come from macOS battery telemetry. Even when the app refreshes every second, the underlying battery readings may update more slowly or appear smoothed by the system, so visible changes often land on a cadence closer to a few seconds rather than every exact second.
+That makes it easier to compare chargers, cables, docks, and multi-port power bricks without opening a larger system utility.
 
 ## Build
 
-### With Xcode
+### Xcode
 
 1. Open `WhatWatt.xcodeproj` in Xcode.
 2. Select the `WhatWatt` target.
-3. Build for the architecture you want on that machine.
+3. Build on the machine architecture you want to ship.
 
-### With Command Line Tools
+### Command Line Tools
 
 On Intel Macs, you can build with `swiftc` and the macOS SDK from Command Line Tools:
 
 ```bash
-mkdir -p build/WhatWatt.app/Contents/MacOS build/WhatWatt.app/Contents/Resources
-swiftc -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk   -framework Cocoa   -framework IOKit   WhatWatt/main.swift   WhatWatt/AppDelegate.swift   WhatWatt/ViewController.swift   -o build/WhatWatt.app/Contents/MacOS/WhatWatt
-cp WhatWatt/Info.plist build/WhatWatt.app/Contents/Info.plist
-codesign --force --deep --sign - build/WhatWatt.app
+mkdir -p build/whatwatts.app/Contents/MacOS build/whatwatts.app/Contents/Resources
+swiftc -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk \
+  -framework Cocoa \
+  -framework IOKit \
+  WhatWatt/main.swift \
+  WhatWatt/AppDelegate.swift \
+  WhatWatt/ViewController.swift \
+  -o build/whatwatts.app/Contents/MacOS/whatwatts
+cp WhatWatt/Info.plist build/whatwatts.app/Contents/Info.plist
+codesign --force --deep --sign - build/whatwatts.app
 ```
 
-## Release strategy
+## Releases
 
-This project should publish separate binaries instead of pretending one local machine can always produce both cleanly.
+The clean distribution strategy is to publish separate binaries by architecture.
 
-- Intel release: build on Intel and publish an `x86_64` app bundle.
-- Apple Silicon release: build on Apple Silicon and publish an `arm64` app bundle.
-- Optional universal release: if needed later, combine vetted `x86_64` and `arm64` binaries with `lipo` and package that separately.
+- Intel release: build and ship an `x86_64` app bundle on Intel
+- Apple Silicon release: build and ship an `arm64` app bundle on Apple Silicon
+- Universal release: optional later, only if both sides are built and verified first
 
-That keeps distribution explicit and avoids shipping untested cross-compiled binaries.
+That keeps releases explicit and avoids shipping cross-compiled binaries that were never tested on their native platform.
 
 ## License and credit
 
