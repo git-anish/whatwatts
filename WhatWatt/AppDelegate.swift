@@ -14,6 +14,7 @@ private enum DefaultsKey {
     static let liveUpdateInterval = "LiveUpdateInterval"
     static let liveBurstDuration = "LiveBurstDuration"
     static let idleUpdateInterval = "IdleUpdateInterval"
+    static let showAdapterWhenUnplugged = "ShowAdapterWhenUnplugged"
 }
 
 private struct AppConfiguration {
@@ -21,6 +22,7 @@ private struct AppConfiguration {
     let liveUpdateInterval: TimeInterval
     let liveBurstDuration: TimeInterval
     let idleUpdateInterval: TimeInterval
+    let showAdapterWhenUnplugged: Bool
 
     static func current() -> AppConfiguration {
         let defaults = UserDefaults.standard
@@ -28,7 +30,8 @@ private struct AppConfiguration {
             alwaysLiveUpdates: defaults.bool(forKey: DefaultsKey.alwaysLiveUpdates),
             liveUpdateInterval: clamp(defaults.double(forKey: DefaultsKey.liveUpdateInterval), min: 1.0, max: 10.0, fallback: 1.0),
             liveBurstDuration: clamp(defaults.double(forKey: DefaultsKey.liveBurstDuration), min: 5.0, max: 300.0, fallback: 20.0),
-            idleUpdateInterval: clamp(defaults.double(forKey: DefaultsKey.idleUpdateInterval), min: 10.0, max: 300.0, fallback: 60.0)
+            idleUpdateInterval: clamp(defaults.double(forKey: DefaultsKey.idleUpdateInterval), min: 10.0, max: 300.0, fallback: 60.0),
+            showAdapterWhenUnplugged: defaults.bool(forKey: DefaultsKey.showAdapterWhenUnplugged)
         )
     }
 
@@ -96,6 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var batteryDetail: NSMenuItem!
     private var modeDetail: NSMenuItem!
     private var alwaysLiveMenuItem: NSMenuItem!
+    private var showAdapterWhenUnpluggedMenuItem: NSMenuItem!
     private var preferencesWindowController: PreferencesWindowController?
     private var powerSourceLoopSource: CFRunLoopSource?
     private var refreshTimer: DispatchSourceTimer?
@@ -130,6 +134,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             DefaultsKey.liveUpdateInterval: 1.0,
             DefaultsKey.liveBurstDuration: 20.0,
             DefaultsKey.idleUpdateInterval: 60.0,
+            DefaultsKey.showAdapterWhenUnplugged: false,
         ])
     }
 
@@ -148,6 +153,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         alwaysLiveMenuItem = NSMenuItem(title: "Always Live Updates", action: #selector(toggleAlwaysLiveUpdates(_:)), keyEquivalent: "")
         alwaysLiveMenuItem.target = self
 
+        showAdapterWhenUnpluggedMenuItem = NSMenuItem(title: "Show 0W Adapter When Unplugged", action: #selector(toggleShowAdapterWhenUnplugged(_:)), keyEquivalent: "")
+        showAdapterWhenUnpluggedMenuItem.target = self
+
         let preferencesItem = NSMenuItem(title: "Preferences...", action: #selector(openPreferences(_:)), keyEquivalent: ",")
         preferencesItem.target = self
 
@@ -157,6 +165,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(modeDetail)
         menu.addItem(NSMenuItem.separator())
         menu.addItem(alwaysLiveMenuItem)
+        menu.addItem(showAdapterWhenUnpluggedMenuItem)
         menu.addItem(preferencesItem)
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -181,6 +190,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleAlwaysLiveUpdates(_ sender: NSMenuItem) {
         let defaults = UserDefaults.standard
         defaults.set(!defaults.bool(forKey: DefaultsKey.alwaysLiveUpdates), forKey: DefaultsKey.alwaysLiveUpdates)
+        applyPreferences()
+    }
+
+    @objc private func toggleShowAdapterWhenUnplugged(_ sender: NSMenuItem) {
+        let defaults = UserDefaults.standard
+        defaults.set(!defaults.bool(forKey: DefaultsKey.showAdapterWhenUnplugged), forKey: DefaultsKey.showAdapterWhenUnplugged)
         applyPreferences()
     }
 
@@ -237,6 +252,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func syncMenuState() {
         let configuration = AppConfiguration.current()
         alwaysLiveMenuItem.state = configuration.alwaysLiveUpdates ? .on : .off
+        showAdapterWhenUnpluggedMenuItem.state = configuration.showAdapterWhenUnplugged ? .on : .off
     }
 
     private func currentModeLabel(configuration: AppConfiguration) -> String {
@@ -287,8 +303,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func menuBarTitle(snapshot: PowerSnapshot) -> String {
+        let configuration = AppConfiguration.current()
         guard let batteryWatts = snapshot.battery.watts else {
+            if snapshot.adapter.watts == 0 && !configuration.showAdapterWhenUnplugged {
+                return snapshot.battery.flowSymbol
+            }
             return String(format: "%dW", snapshot.adapter.watts)
+        }
+
+        if snapshot.adapter.watts == 0 && !configuration.showAdapterWhenUnplugged {
+            return String(format: "%@%.1fW", snapshot.battery.flowSymbol, abs(batteryWatts))
         }
 
         return String(format: "%dW | %@%.1fW",
@@ -433,6 +457,7 @@ private final class PreferencesWindowController: NSWindowController {
     private let onApply: () -> Void
 
     private let alwaysLiveCheckbox = NSButton(checkboxWithTitle: "Always live updates", target: nil, action: nil)
+    private let showAdapterWhenUnpluggedCheckbox = NSButton(checkboxWithTitle: "Show 0W adapter when unplugged", target: nil, action: nil)
     private let liveIntervalField = NSTextField(string: "")
     private let burstDurationField = NSTextField(string: "")
     private let idleIntervalField = NSTextField(string: "")
@@ -461,6 +486,7 @@ private final class PreferencesWindowController: NSWindowController {
     func reloadFromDefaults() {
         let configuration = AppConfiguration.current()
         alwaysLiveCheckbox.state = configuration.alwaysLiveUpdates ? .on : .off
+        showAdapterWhenUnpluggedCheckbox.state = configuration.showAdapterWhenUnplugged ? .on : .off
         liveIntervalField.stringValue = formatNumber(configuration.liveUpdateInterval)
         burstDurationField.stringValue = formatNumber(configuration.liveBurstDuration)
         idleIntervalField.stringValue = formatNumber(configuration.idleUpdateInterval)
@@ -498,7 +524,7 @@ private final class PreferencesWindowController: NSWindowController {
         buttonRow.spacing = 10
         buttonRow.alignment = .centerY
 
-        let stack = NSStackView(views: [helpLabel, alwaysLiveCheckbox, grid, buttonRow])
+        let stack = NSStackView(views: [helpLabel, alwaysLiveCheckbox, showAdapterWhenUnpluggedCheckbox, grid, buttonRow])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 14
@@ -522,6 +548,7 @@ private final class PreferencesWindowController: NSWindowController {
 
     @objc private func savePreferences(_ sender: Any?) {
         defaults.set(alwaysLiveCheckbox.state == .on, forKey: DefaultsKey.alwaysLiveUpdates)
+        defaults.set(showAdapterWhenUnpluggedCheckbox.state == .on, forKey: DefaultsKey.showAdapterWhenUnplugged)
         defaults.set(sanitizedValue(from: liveIntervalField, min: 1, max: 10, fallback: 1), forKey: DefaultsKey.liveUpdateInterval)
         defaults.set(sanitizedValue(from: burstDurationField, min: 5, max: 300, fallback: 20), forKey: DefaultsKey.liveBurstDuration)
         defaults.set(sanitizedValue(from: idleIntervalField, min: 10, max: 300, fallback: 60), forKey: DefaultsKey.idleUpdateInterval)
@@ -531,6 +558,7 @@ private final class PreferencesWindowController: NSWindowController {
 
     @objc private func resetDefaults(_ sender: Any?) {
         defaults.set(false, forKey: DefaultsKey.alwaysLiveUpdates)
+        defaults.set(false, forKey: DefaultsKey.showAdapterWhenUnplugged)
         defaults.set(1.0, forKey: DefaultsKey.liveUpdateInterval)
         defaults.set(20.0, forKey: DefaultsKey.liveBurstDuration)
         defaults.set(60.0, forKey: DefaultsKey.idleUpdateInterval)

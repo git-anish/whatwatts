@@ -15,7 +15,8 @@ This fork adds the behavior requested for day-to-day charger debugging:
 - burst mode: `1s` refresh for `20s` after a real charger-state change
 - menu toggle for `Always Live Updates`
 - lightweight `Preferences...` window for tuning live interval, burst duration, and idle interval
-- cleaner menu bar title format such as `67W | ↓18.4W`
+- cleaner menu bar title format such as `67W | ↑18.4W` while charging and `↓18.4W` when unplugged
+- optional `Show 0W adapter when unplugged` preference if you prefer the explicit adapter state in the menu bar
 - Intel-safe signed current handling for wrapped battery amperage values
 
 ## Why this exists
