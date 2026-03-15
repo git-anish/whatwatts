@@ -6,6 +6,16 @@ whatwatts is a lightweight macOS menu bar app for answering one simple question:
 
 It keeps the original WhatWatt idea of showing negotiated adapter wattage, and adds the missing half of the picture: live battery charge and discharge rate.
 
+## Screenshots
+
+Menu bar app:
+
+![Menu bar app](assets/screenshots/menu-bar.png)
+
+Preferences:
+
+![Preferences](assets/screenshots/preferences.png)
+
 Built on top of [SomeInterestingUserName/WhatWatt](https://github.com/SomeInterestingUserName/WhatWatt) by Jiawei Chen. The original MIT license is preserved. The upstream PR intentionally keeps the original app name; this public repo uses the `whatwatts` branding.
 
 ## Highlights
