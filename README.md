@@ -74,25 +74,25 @@ Pick the command that matches your Mac, paste it into Terminal, and press Return
 Intel test run:
 
 ```bash
-curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-intel.zip -o ~/Downloads/whatwatts-intel.zip && ditto -x -k ~/Downloads/whatwatts-intel.zip ~/Downloads && xattr -dr com.apple.quarantine ~/Downloads/whatwatts-intel.app && open ~/Downloads/whatwatts-intel.app
+curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0.1/whatwatts-intel.zip -o ~/Downloads/whatwatts-intel.zip && ditto -x -k ~/Downloads/whatwatts-intel.zip ~/Downloads && xattr -dr com.apple.quarantine ~/Downloads/whatwatts-intel.app && open ~/Downloads/whatwatts-intel.app
 ```
 
 Apple Silicon test run:
 
 ```bash
-curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-apple-silicon.zip -o ~/Downloads/whatwatts-apple-silicon.zip && ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && xattr -dr com.apple.quarantine ~/Downloads/whatwatts-apple-silicon.app && open ~/Downloads/whatwatts-apple-silicon.app
+curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0.1/whatwatts-apple-silicon.zip -o ~/Downloads/whatwatts-apple-silicon.zip && ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && xattr -dr com.apple.quarantine ~/Downloads/whatwatts-apple-silicon.app && open ~/Downloads/whatwatts-apple-silicon.app
 ```
 
 Intel install:
 
 ```bash
-curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-intel.zip -o ~/Downloads/whatwatts-intel.zip && ditto -x -k ~/Downloads/whatwatts-intel.zip ~/Downloads && sudo rm -rf /Applications/whatwatts.app && sudo mv ~/Downloads/whatwatts-intel.app /Applications/whatwatts.app && sudo xattr -dr com.apple.quarantine /Applications/whatwatts.app && open /Applications/whatwatts.app
+curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0.1/whatwatts-intel.zip -o ~/Downloads/whatwatts-intel.zip && ditto -x -k ~/Downloads/whatwatts-intel.zip ~/Downloads && sudo rm -rf /Applications/whatwatts.app && sudo mv ~/Downloads/whatwatts-intel.app /Applications/whatwatts.app && sudo xattr -dr com.apple.quarantine /Applications/whatwatts.app && open /Applications/whatwatts.app
 ```
 
 Apple Silicon install:
 
 ```bash
-curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-apple-silicon.zip -o ~/Downloads/whatwatts-apple-silicon.zip && ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && sudo rm -rf /Applications/whatwatts.app && sudo mv ~/Downloads/whatwatts-apple-silicon.app /Applications/whatwatts.app && sudo xattr -dr com.apple.quarantine /Applications/whatwatts.app && open /Applications/whatwatts.app
+curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0.1/whatwatts-apple-silicon.zip -o ~/Downloads/whatwatts-apple-silicon.zip && ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && sudo rm -rf /Applications/whatwatts.app && sudo mv ~/Downloads/whatwatts-apple-silicon.app /Applications/whatwatts.app && sudo xattr -dr com.apple.quarantine /Applications/whatwatts.app && open /Applications/whatwatts.app
 ```
 
 What the commands do:
