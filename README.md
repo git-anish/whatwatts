@@ -26,11 +26,6 @@ Built on top of [SomeInterestingUserName/WhatWatt](https://github.com/SomeIntere
 - Can also show an optional SMC system-power estimate in the menu bar
 - Uses a clean title format like `67W | ↑18.4W | 23.1W`
 - Defaults to a low-power refresh mode with fast updates only when charger state changes
-- Includes `Always Live Updates` for people who want continuous refreshes
-- Includes `Keep showing adapter as 0W when unplugged` if you prefer explicit adapter state in the menu bar
-- Includes `Hide battery flow when idle on charger` for full or optimized-charge hold states
-- Adds a lightweight `Preferences...` window for tuning update behavior
-- Handles wrapped signed battery current values correctly on Intel Macs
 
 ## Why this fork exists
 
