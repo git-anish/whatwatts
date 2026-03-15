@@ -6,6 +6,8 @@ whatwatts is a lightweight macOS menu bar app for answering one simple question:
 
 It keeps the original WhatWatt idea of showing negotiated adapter wattage, and adds the missing half of the picture: live battery charge and discharge rate.
 
+It also includes an optional system-power estimate sourced from the Mac's SMC, inspired by SAP's Power Monitor app.
+
 ## Screenshots
 
 Menu bar app:
@@ -21,10 +23,12 @@ Built on top of [SomeInterestingUserName/WhatWatt](https://github.com/SomeIntere
 ## Highlights
 
 - Shows adapter wattage and battery power flow in one compact menu bar item
-- Uses a clean title format like `67W | ↑18.4W` while charging and `↓18.4W` when unplugged
+- Can also show an optional SMC system-power estimate in the menu bar
+- Uses a clean title format like `67W | ↑18.4W | 23.1W`
 - Defaults to a low-power refresh mode with fast updates only when charger state changes
 - Includes `Always Live Updates` for people who want continuous refreshes
 - Includes `Keep showing adapter as 0W when unplugged` if you prefer explicit adapter state in the menu bar
+- Includes `Hide battery flow when idle on charger` for full or optimized-charge hold states
 - Adds a lightweight `Preferences...` window for tuning update behavior
 - Handles wrapped signed battery current values correctly on Intel Macs
 
@@ -33,6 +37,18 @@ Built on top of [SomeInterestingUserName/WhatWatt](https://github.com/SomeIntere
 The original app is great at showing what the charger negotiated with macOS. This fork adds the part that is often more useful in practice: whether the battery is actually charging or discharging, and by how much.
 
 That makes it easier to compare chargers, cables, docks, and multi-port power bricks without opening a larger system utility.
+
+The optional system-power estimate came from looking at how [SAP Power Monitor](https://github.com/SAP/power-monitoring-tool-for-macos) approaches the same problem. `whatwatts` now reads the same class of private SMC value to expose a lightweight "how hard is the machine pulling right now?" estimate alongside charger and battery data.
+
+In low-power mode, the SMC value is shown as a rolling 60-second average. If you want faster 1-second updates, enable `Always Live Updates`.
+
+## SMC system power note
+
+The SMC system-power readout is an estimate exposed through private Apple interfaces, not a public supported API.
+
+- It is useful today and was tested working on an Intel Mac.
+- It may stop working in a future macOS release or on different hardware generations.
+- If it does, adapter and battery readings should continue to work normally.
 
 ## Build
 

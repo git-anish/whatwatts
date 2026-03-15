@@ -15,6 +15,10 @@ private enum DefaultsKey {
     static let liveBurstDuration = "LiveBurstDuration"
     static let idleUpdateInterval = "IdleUpdateInterval"
     static let showAdapterWhenUnplugged = "ShowAdapterWhenUnplugged"
+    static let showAdapterInMenuBar = "ShowAdapterInMenuBar"
+    static let showBatteryInMenuBar = "ShowBatteryInMenuBar"
+    static let showSystemPowerInMenuBar = "ShowSystemPowerInMenuBar"
+    static let hideBatteryWhenIdleOnCharger = "HideBatteryWhenIdleOnCharger"
 }
 
 private struct AppConfiguration {
@@ -23,6 +27,10 @@ private struct AppConfiguration {
     let liveBurstDuration: TimeInterval
     let idleUpdateInterval: TimeInterval
     let showAdapterWhenUnplugged: Bool
+    let showAdapterInMenuBar: Bool
+    let showBatteryInMenuBar: Bool
+    let showSystemPowerInMenuBar: Bool
+    let hideBatteryWhenIdleOnCharger: Bool
 
     static func current() -> AppConfiguration {
         let defaults = UserDefaults.standard
@@ -31,7 +39,11 @@ private struct AppConfiguration {
             liveUpdateInterval: clamp(defaults.double(forKey: DefaultsKey.liveUpdateInterval), min: 1.0, max: 10.0, fallback: 1.0),
             liveBurstDuration: clamp(defaults.double(forKey: DefaultsKey.liveBurstDuration), min: 5.0, max: 300.0, fallback: 20.0),
             idleUpdateInterval: clamp(defaults.double(forKey: DefaultsKey.idleUpdateInterval), min: 10.0, max: 300.0, fallback: 60.0),
-            showAdapterWhenUnplugged: defaults.bool(forKey: DefaultsKey.showAdapterWhenUnplugged)
+            showAdapterWhenUnplugged: defaults.bool(forKey: DefaultsKey.showAdapterWhenUnplugged),
+            showAdapterInMenuBar: defaults.bool(forKey: DefaultsKey.showAdapterInMenuBar),
+            showBatteryInMenuBar: defaults.bool(forKey: DefaultsKey.showBatteryInMenuBar),
+            showSystemPowerInMenuBar: defaults.bool(forKey: DefaultsKey.showSystemPowerInMenuBar),
+            hideBatteryWhenIdleOnCharger: defaults.bool(forKey: DefaultsKey.hideBatteryWhenIdleOnCharger)
         )
     }
 
@@ -66,6 +78,7 @@ private struct BatteryInfo {
 private struct PowerSnapshot {
     let adapter: AdapterInfo
     let battery: BatteryInfo
+    let systemPowerWatts: Double?
 
     var eventSignature: PowerEventSignature {
         PowerEventSignature(externalConnected: battery.externalConnected,
@@ -97,9 +110,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var chargerDetail: NSMenuItem!
     private var batteryDetail: NSMenuItem!
+    private var systemDetail: NSMenuItem!
     private var modeDetail: NSMenuItem!
     private var alwaysLiveMenuItem: NSMenuItem!
     private var showAdapterWhenUnpluggedMenuItem: NSMenuItem!
+    private var showAdapterInMenuBarMenuItem: NSMenuItem!
+    private var showBatteryInMenuBarMenuItem: NSMenuItem!
+    private var showSystemPowerInMenuBarMenuItem: NSMenuItem!
+    private var hideBatteryWhenIdleMenuItem: NSMenuItem!
     private var preferencesWindowController: PreferencesWindowController?
     private var powerSourceLoopSource: CFRunLoopSource?
     private var refreshTimer: DispatchSourceTimer?
@@ -110,6 +128,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let notChargingText = "Not Charging"
     private let chargingText = "Charging"
     private let batteryUnknownText = "Battery Rate Unavailable"
+    private var recentSystemPowerSamples: [(date: Date, watts: Double)] = []
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         registerDefaults()
@@ -135,6 +154,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             DefaultsKey.liveBurstDuration: 20.0,
             DefaultsKey.idleUpdateInterval: 60.0,
             DefaultsKey.showAdapterWhenUnplugged: false,
+            DefaultsKey.showAdapterInMenuBar: true,
+            DefaultsKey.showBatteryInMenuBar: true,
+            DefaultsKey.showSystemPowerInMenuBar: true,
+            DefaultsKey.hideBatteryWhenIdleOnCharger: false,
         ])
     }
 
@@ -147,6 +170,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         batteryDetail = NSMenuItem(title: batteryUnknownText, action: nil, keyEquivalent: "")
         batteryDetail.isEnabled = false
 
+        systemDetail = NSMenuItem(title: "System Power Unavailable", action: nil, keyEquivalent: "")
+        systemDetail.isEnabled = false
+
         modeDetail = NSMenuItem(title: "Mode: Starting...", action: nil, keyEquivalent: "")
         modeDetail.isEnabled = false
 
@@ -156,16 +182,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         showAdapterWhenUnpluggedMenuItem = NSMenuItem(title: "Keep showing adapter as 0W when unplugged", action: #selector(toggleShowAdapterWhenUnplugged(_:)), keyEquivalent: "")
         showAdapterWhenUnpluggedMenuItem.target = self
 
+        showAdapterInMenuBarMenuItem = NSMenuItem(title: "Show Adapter Wattage", action: #selector(toggleShowAdapterInMenuBar(_:)), keyEquivalent: "")
+        showAdapterInMenuBarMenuItem.target = self
+
+        showBatteryInMenuBarMenuItem = NSMenuItem(title: "Show Battery Flow", action: #selector(toggleShowBatteryInMenuBar(_:)), keyEquivalent: "")
+        showBatteryInMenuBarMenuItem.target = self
+
+        showSystemPowerInMenuBarMenuItem = NSMenuItem(title: "Show System Power", action: #selector(toggleShowSystemPowerInMenuBar(_:)), keyEquivalent: "")
+        showSystemPowerInMenuBarMenuItem.target = self
+
+        hideBatteryWhenIdleMenuItem = NSMenuItem(title: "Hide Battery Flow When Idle On Charger", action: #selector(toggleHideBatteryWhenIdleOnCharger(_:)), keyEquivalent: "")
+        hideBatteryWhenIdleMenuItem.target = self
+
         let preferencesItem = NSMenuItem(title: "Preferences...", action: #selector(openPreferences(_:)), keyEquivalent: ",")
         preferencesItem.target = self
 
         let menu = NSMenu()
         menu.addItem(chargerDetail)
         menu.addItem(batteryDetail)
+        menu.addItem(systemDetail)
         menu.addItem(modeDetail)
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(alwaysLiveMenuItem)
+        menu.addItem(showAdapterInMenuBarMenuItem)
+        menu.addItem(showBatteryInMenuBarMenuItem)
+        menu.addItem(showSystemPowerInMenuBarMenuItem)
         menu.addItem(showAdapterWhenUnpluggedMenuItem)
+        menu.addItem(hideBatteryWhenIdleMenuItem)
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(alwaysLiveMenuItem)
         menu.addItem(preferencesItem)
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -196,6 +240,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleShowAdapterWhenUnplugged(_ sender: NSMenuItem) {
         let defaults = UserDefaults.standard
         defaults.set(!defaults.bool(forKey: DefaultsKey.showAdapterWhenUnplugged), forKey: DefaultsKey.showAdapterWhenUnplugged)
+        applyPreferences()
+    }
+
+    @objc private func toggleShowAdapterInMenuBar(_ sender: NSMenuItem) {
+        let defaults = UserDefaults.standard
+        defaults.set(!defaults.bool(forKey: DefaultsKey.showAdapterInMenuBar), forKey: DefaultsKey.showAdapterInMenuBar)
+        applyPreferences()
+    }
+
+    @objc private func toggleShowBatteryInMenuBar(_ sender: NSMenuItem) {
+        let defaults = UserDefaults.standard
+        defaults.set(!defaults.bool(forKey: DefaultsKey.showBatteryInMenuBar), forKey: DefaultsKey.showBatteryInMenuBar)
+        applyPreferences()
+    }
+
+    @objc private func toggleShowSystemPowerInMenuBar(_ sender: NSMenuItem) {
+        let defaults = UserDefaults.standard
+        defaults.set(!defaults.bool(forKey: DefaultsKey.showSystemPowerInMenuBar), forKey: DefaultsKey.showSystemPowerInMenuBar)
+        applyPreferences()
+    }
+
+    @objc private func toggleHideBatteryWhenIdleOnCharger(_ sender: NSMenuItem) {
+        let defaults = UserDefaults.standard
+        defaults.set(!defaults.bool(forKey: DefaultsKey.hideBatteryWhenIdleOnCharger), forKey: DefaultsKey.hideBatteryWhenIdleOnCharger)
         applyPreferences()
     }
 
@@ -237,6 +305,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         lastEventSignature = snapshot.eventSignature
+        recordSystemPowerSample(snapshot.systemPowerWatts)
         updateUI(with: snapshot, configuration: configuration)
         rescheduleTimer(using: configuration)
     }
@@ -245,6 +314,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.title = menuBarTitle(snapshot: snapshot)
         chargerDetail.title = adapterTitle(snapshot.adapter)
         batteryDetail.title = batteryTitle(snapshot.battery)
+        systemDetail.title = systemPowerTitle(snapshot.systemPowerWatts)
         modeDetail.title = currentModeLabel(configuration: configuration)
         syncMenuState()
     }
@@ -253,6 +323,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let configuration = AppConfiguration.current()
         alwaysLiveMenuItem.state = configuration.alwaysLiveUpdates ? .on : .off
         showAdapterWhenUnpluggedMenuItem.state = configuration.showAdapterWhenUnplugged ? .on : .off
+        showAdapterInMenuBarMenuItem.state = configuration.showAdapterInMenuBar ? .on : .off
+        showBatteryInMenuBarMenuItem.state = configuration.showBatteryInMenuBar ? .on : .off
+        showSystemPowerInMenuBarMenuItem.state = configuration.showSystemPowerInMenuBar ? .on : .off
+        hideBatteryWhenIdleMenuItem.state = configuration.hideBatteryWhenIdleOnCharger ? .on : .off
     }
 
     private func currentModeLabel(configuration: AppConfiguration) -> String {
@@ -304,21 +378,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func menuBarTitle(snapshot: PowerSnapshot) -> String {
         let configuration = AppConfiguration.current()
-        guard let batteryWatts = snapshot.battery.watts else {
-            if snapshot.adapter.watts == 0 && !configuration.showAdapterWhenUnplugged {
-                return snapshot.battery.flowSymbol
+        var parts: [String] = []
+
+        if configuration.showAdapterInMenuBar {
+            if snapshot.adapter.watts != 0 || configuration.showAdapterWhenUnplugged {
+                parts.append(String(format: "%dW", snapshot.adapter.watts))
             }
-            return String(format: "%dW", snapshot.adapter.watts)
         }
 
-        if snapshot.adapter.watts == 0 && !configuration.showAdapterWhenUnplugged {
+        if configuration.showBatteryInMenuBar,
+           !shouldHideBatteryInMenuBar(snapshot: snapshot, configuration: configuration),
+           let batteryWatts = snapshot.battery.watts {
+            parts.append(String(format: "%@%.1fW", snapshot.battery.flowSymbol, abs(batteryWatts)))
+        }
+
+        if configuration.showSystemPowerInMenuBar,
+           let systemPowerWatts = displayedSystemPowerWatts(configuration: configuration),
+           systemPowerWatts > 0.05 {
+            parts.append(String(format: "%.1fW", systemPowerWatts))
+        }
+
+        if !parts.isEmpty {
+            return parts.joined(separator: " | ")
+        }
+
+        if let batteryWatts = snapshot.battery.watts {
             return String(format: "%@%.1fW", snapshot.battery.flowSymbol, abs(batteryWatts))
         }
 
-        return String(format: "%dW | %@%.1fW",
-                      snapshot.adapter.watts,
-                      snapshot.battery.flowSymbol,
-                      abs(batteryWatts))
+        return "whatwatts"
     }
 
     private func adapterTitle(_ adapter: AdapterInfo) -> String {
@@ -358,8 +446,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                       volts)
     }
 
+    private func systemPowerTitle(_ watts: Double?) -> String {
+        let configuration = AppConfiguration.current()
+        guard let watts = displayedSystemPowerWatts(configuration: configuration), watts > 0.05 else {
+            return "System: Power Unavailable"
+        }
+        if configuration.alwaysLiveUpdates {
+            return String(format: "System: %.1f W live (SMC estimate)", watts)
+        }
+        return String(format: "System: %.1f W avg (60s, SMC estimate)", watts)
+    }
+
     private func readPowerSnapshot() -> PowerSnapshot {
-        PowerSnapshot(adapter: readAdapterInfo(), battery: readBatteryInfo())
+        PowerSnapshot(adapter: readAdapterInfo(),
+                      battery: readBatteryInfo(),
+                      systemPowerWatts: readSystemPowerWatts())
     }
 
     private func readAdapterInfo() -> AdapterInfo {
@@ -450,12 +551,100 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         return nil
     }
+
+    private func readSystemPowerWatts() -> Double? {
+        let smc = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("AppleSMC"))
+        guard smc != IO_OBJECT_NULL else { return nil }
+        defer { IOObjectRelease(smc) }
+
+        var connection: io_connect_t = IO_OBJECT_NULL
+        let openResult = IOServiceOpen(smc, mach_task_self_, 1, &connection)
+        guard openResult == KERN_SUCCESS, connection != IO_OBJECT_NULL else {
+            return nil
+        }
+        defer { IOServiceClose(connection) }
+
+        let key = fourCharCode("PSTR")
+        let valueOffset = 48
+        var input = [UInt8](repeating: 0, count: 80)
+        var output = [UInt8](repeating: 0, count: 80)
+        var outputSize = output.count
+
+        withUnsafeBytes(of: key) { keyBytes in
+            for (index, byte) in keyBytes.enumerated() {
+                input[index] = byte
+            }
+        }
+        withUnsafeBytes(of: UInt32(4)) { sizeBytes in
+            for (index, byte) in sizeBytes.enumerated() {
+                input[28 + index] = byte
+            }
+        }
+        input[42] = 5
+
+        let result = input.withUnsafeBytes { inputBytes in
+            output.withUnsafeMutableBytes { outputBytes in
+                IOConnectCallStructMethod(connection,
+                                          2,
+                                          inputBytes.baseAddress!,
+                                          input.count,
+                                          outputBytes.baseAddress!,
+                                          &outputSize)
+            }
+        }
+
+        guard result == kIOReturnSuccess, outputSize >= valueOffset + 4 else {
+            return nil
+        }
+
+        let watts = output.withUnsafeBytes { rawBuffer -> Float in
+            rawBuffer.load(fromByteOffset: valueOffset, as: Float.self)
+        }
+        return watts.isFinite && watts > 0 ? Double(watts) : nil
+    }
+
+    private func fourCharCode(_ string: String) -> UInt32 {
+        string.utf8.reduce(0) { ($0 << 8) + UInt32($1) }
+    }
+
+    private func recordSystemPowerSample(_ watts: Double?) {
+        guard let watts, watts > 0.05 else { return }
+        let now = Date()
+        recentSystemPowerSamples.append((date: now, watts: watts))
+        recentSystemPowerSamples.removeAll { now.timeIntervalSince($0.date) > 60.0 }
+    }
+
+    private func displayedSystemPowerWatts(configuration: AppConfiguration) -> Double? {
+        if configuration.alwaysLiveUpdates {
+            return recentSystemPowerSamples.last?.watts
+        }
+
+        let now = Date()
+        let samples = recentSystemPowerSamples.filter { now.timeIntervalSince($0.date) <= 60.0 }
+        guard !samples.isEmpty else { return nil }
+        let total = samples.reduce(0.0) { $0 + $1.watts }
+        return total / Double(samples.count)
+    }
+
+    private func shouldHideBatteryInMenuBar(snapshot: PowerSnapshot, configuration: AppConfiguration) -> Bool {
+        guard configuration.hideBatteryWhenIdleOnCharger,
+              snapshot.battery.externalConnected,
+              !snapshot.battery.isCharging,
+              let watts = snapshot.battery.watts else {
+            return false
+        }
+        return abs(watts) <= 0.35
+    }
 }
 
 private final class PreferencesWindowController: NSWindowController {
     private let defaults = UserDefaults.standard
     private let onApply: () -> Void
 
+    private let showAdapterCheckbox = NSButton(checkboxWithTitle: "Show adapter wattage", target: nil, action: nil)
+    private let showBatteryCheckbox = NSButton(checkboxWithTitle: "Show battery flow", target: nil, action: nil)
+    private let showSystemPowerCheckbox = NSButton(checkboxWithTitle: "Show system power", target: nil, action: nil)
+    private let hideBatteryWhenIdleCheckbox = NSButton(checkboxWithTitle: "Hide battery flow when idle on charger", target: nil, action: nil)
     private let alwaysLiveCheckbox = NSButton(checkboxWithTitle: "Always live updates", target: nil, action: nil)
     private let showAdapterWhenUnpluggedCheckbox = NSButton(checkboxWithTitle: "Keep showing adapter as 0W when unplugged", target: nil, action: nil)
 
@@ -496,6 +685,10 @@ private final class PreferencesWindowController: NSWindowController {
 
     func reloadFromDefaults() {
         let configuration = AppConfiguration.current()
+        showAdapterCheckbox.state = configuration.showAdapterInMenuBar ? .on : .off
+        showBatteryCheckbox.state = configuration.showBatteryInMenuBar ? .on : .off
+        showSystemPowerCheckbox.state = configuration.showSystemPowerInMenuBar ? .on : .off
+        hideBatteryWhenIdleCheckbox.state = configuration.hideBatteryWhenIdleOnCharger ? .on : .off
         alwaysLiveCheckbox.state = configuration.alwaysLiveUpdates ? .on : .off
         showAdapterWhenUnpluggedCheckbox.state = configuration.showAdapterWhenUnplugged ? .on : .off
 
@@ -511,6 +704,10 @@ private final class PreferencesWindowController: NSWindowController {
         configureStepper(burstDurationStepper, action: #selector(stepperChanged(_:)), min: 5, max: 300, increment: 5)
         configureStepper(idleIntervalStepper, action: #selector(stepperChanged(_:)), min: 10, max: 300, increment: 5)
 
+        showAdapterCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
+        showBatteryCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
+        showSystemPowerCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
+        hideBatteryWhenIdleCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
         alwaysLiveCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
         showAdapterWhenUnpluggedCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
 
@@ -525,12 +722,19 @@ private final class PreferencesWindowController: NSWindowController {
         let displayLabel = sectionLabel("Display")
         let refreshLabel = sectionLabel("Refresh cadence")
 
-        let explanationLabel = NSTextField(labelWithString: "Idle: 60 sec. Charger events: 1 sec for 20 sec.")
+        let explanationLabel = NSTextField(labelWithString: "Idle: 60 sec. Charger events: 1 sec for 20 sec. System power uses a rolling 60 sec average unless Always live is enabled.")
         explanationLabel.textColor = .secondaryLabelColor
         explanationLabel.lineBreakMode = .byWordWrapping
         explanationLabel.maximumNumberOfLines = 2
 
-        let displayGroup = NSStackView(views: [alwaysLiveCheckbox, showAdapterWhenUnpluggedCheckbox])
+        let displayGroup = NSStackView(views: [
+            showAdapterCheckbox,
+            showBatteryCheckbox,
+            showSystemPowerCheckbox,
+            hideBatteryWhenIdleCheckbox,
+            showAdapterWhenUnpluggedCheckbox,
+            alwaysLiveCheckbox,
+        ])
         displayGroup.orientation = .vertical
         displayGroup.alignment = .leading
         displayGroup.spacing = 10
@@ -606,6 +810,10 @@ private final class PreferencesWindowController: NSWindowController {
     @objc private func savePreferences(_ sender: Any?) {
         defaults.set(alwaysLiveCheckbox.state == .on, forKey: DefaultsKey.alwaysLiveUpdates)
         defaults.set(showAdapterWhenUnpluggedCheckbox.state == .on, forKey: DefaultsKey.showAdapterWhenUnplugged)
+        defaults.set(showAdapterCheckbox.state == .on, forKey: DefaultsKey.showAdapterInMenuBar)
+        defaults.set(showBatteryCheckbox.state == .on, forKey: DefaultsKey.showBatteryInMenuBar)
+        defaults.set(showSystemPowerCheckbox.state == .on, forKey: DefaultsKey.showSystemPowerInMenuBar)
+        defaults.set(hideBatteryWhenIdleCheckbox.state == .on, forKey: DefaultsKey.hideBatteryWhenIdleOnCharger)
         defaults.set(liveIntervalStepper.doubleValue, forKey: DefaultsKey.liveUpdateInterval)
         defaults.set(burstDurationStepper.doubleValue, forKey: DefaultsKey.liveBurstDuration)
         defaults.set(idleIntervalStepper.doubleValue, forKey: DefaultsKey.idleUpdateInterval)
@@ -616,6 +824,10 @@ private final class PreferencesWindowController: NSWindowController {
     @objc private func resetDefaults(_ sender: Any?) {
         defaults.set(false, forKey: DefaultsKey.alwaysLiveUpdates)
         defaults.set(false, forKey: DefaultsKey.showAdapterWhenUnplugged)
+        defaults.set(true, forKey: DefaultsKey.showAdapterInMenuBar)
+        defaults.set(true, forKey: DefaultsKey.showBatteryInMenuBar)
+        defaults.set(true, forKey: DefaultsKey.showSystemPowerInMenuBar)
+        defaults.set(false, forKey: DefaultsKey.hideBatteryWhenIdleOnCharger)
         defaults.set(1.0, forKey: DefaultsKey.liveUpdateInterval)
         defaults.set(20.0, forKey: DefaultsKey.liveBurstDuration)
         defaults.set(60.0, forKey: DefaultsKey.idleUpdateInterval)
