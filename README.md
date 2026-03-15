@@ -51,7 +51,7 @@ The full app source is public in this repo, so you can inspect exactly what it d
 
 `whatwatts` is not notarized because this project is not being shipped under a paid Apple Developer account. That means macOS may block it on first launch until you explicitly allow it.
 
-To open it on macOS:
+If you want to open it manually through macOS:
 
 1. Try to open the app once.
 2. When macOS says it cannot be opened, dismiss the warning.
@@ -64,7 +64,12 @@ To open it on macOS:
 Apple's guidance for this flow:
 - [Safely open apps on your Mac](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac)
 
-If you want to test the app first without an admin password, use these one-line commands to download the release zip, unzip it in `~/Downloads`, remove the quarantine flag, and open it there.
+If you prefer Terminal, there are two ways to do it:
+
+- Use a `test run` command if you just want to launch `whatwatts` from `~/Downloads` first. This does not need an administrator password.
+- Use an `install` command if you want to move it into `/Applications`. This usually asks for an administrator password because it writes to `/Applications`.
+
+Pick the command that matches your Mac, paste it into Terminal, and press Return.
 
 Intel test run:
 
@@ -78,8 +83,6 @@ Apple Silicon test run:
 curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-apple-silicon.zip -o ~/Downloads/whatwatts-apple-silicon.zip && ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && xattr -dr com.apple.quarantine ~/Downloads/whatwatts-apple-silicon.app && open ~/Downloads/whatwatts-apple-silicon.app
 ```
 
-If you want to install it in `/Applications`, use these one-line commands instead.
-
 Intel install:
 
 ```bash
@@ -92,7 +95,13 @@ Apple Silicon install:
 curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-apple-silicon.zip -o ~/Downloads/whatwatts-apple-silicon.zip && ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && sudo rm -rf /Applications/whatwatts.app && sudo mv ~/Downloads/whatwatts-apple-silicon.app /Applications/whatwatts.app && sudo xattr -dr com.apple.quarantine /Applications/whatwatts.app && open /Applications/whatwatts.app
 ```
 
-These commands use `sudo` because writing to `/Applications` usually requires an administrator password.
+What the commands do:
+
+- `curl -L ...` downloads the release zip from GitHub
+- `ditto -x -k ...` unzips the app
+- `xattr -dr com.apple.quarantine ...` removes macOS quarantine so the app can launch
+- `open ...` launches the app
+- `sudo rm` and `sudo mv` only appear in the install version because moving the app into `/Applications` usually needs admin access
 
 ## Build
 
