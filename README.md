@@ -64,18 +64,18 @@ To open it on macOS:
 Apple's guidance for this flow:
 - [Safely open apps on your Mac](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac)
 
-If you want to test the app first without an admin password, use these one-line commands to unzip it in `~/Downloads`, remove the quarantine flag, and open it there.
+If you want to test the app first without an admin password, use these one-line commands to download the release zip, unzip it in `~/Downloads`, remove the quarantine flag, and open it there.
 
 Intel test run:
 
 ```bash
-ditto -x -k ~/Downloads/whatwatts-intel.zip ~/Downloads && xattr -dr com.apple.quarantine ~/Downloads/whatwatts-intel.app && open ~/Downloads/whatwatts-intel.app
+curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-intel.zip -o ~/Downloads/whatwatts-intel.zip && ditto -x -k ~/Downloads/whatwatts-intel.zip ~/Downloads && xattr -dr com.apple.quarantine ~/Downloads/whatwatts-intel.app && open ~/Downloads/whatwatts-intel.app
 ```
 
 Apple Silicon test run:
 
 ```bash
-ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && xattr -dr com.apple.quarantine ~/Downloads/whatwatts-apple-silicon.app && open ~/Downloads/whatwatts-apple-silicon.app
+curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-apple-silicon.zip -o ~/Downloads/whatwatts-apple-silicon.zip && ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && xattr -dr com.apple.quarantine ~/Downloads/whatwatts-apple-silicon.app && open ~/Downloads/whatwatts-apple-silicon.app
 ```
 
 If you want to install it in `/Applications`, use these one-line commands instead.
@@ -83,13 +83,13 @@ If you want to install it in `/Applications`, use these one-line commands instea
 Intel install:
 
 ```bash
-ditto -x -k ~/Downloads/whatwatts-intel.zip ~/Downloads && sudo rm -rf /Applications/whatwatts.app && sudo mv ~/Downloads/whatwatts-intel.app /Applications/whatwatts.app && sudo xattr -dr com.apple.quarantine /Applications/whatwatts.app && open /Applications/whatwatts.app
+curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-intel.zip -o ~/Downloads/whatwatts-intel.zip && ditto -x -k ~/Downloads/whatwatts-intel.zip ~/Downloads && sudo rm -rf /Applications/whatwatts.app && sudo mv ~/Downloads/whatwatts-intel.app /Applications/whatwatts.app && sudo xattr -dr com.apple.quarantine /Applications/whatwatts.app && open /Applications/whatwatts.app
 ```
 
 Apple Silicon install:
 
 ```bash
-ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && sudo rm -rf /Applications/whatwatts.app && sudo mv ~/Downloads/whatwatts-apple-silicon.app /Applications/whatwatts.app && sudo xattr -dr com.apple.quarantine /Applications/whatwatts.app && open /Applications/whatwatts.app
+curl -L https://github.com/git-anish/whatwatts/releases/download/v1.0/whatwatts-apple-silicon.zip -o ~/Downloads/whatwatts-apple-silicon.zip && ditto -x -k ~/Downloads/whatwatts-apple-silicon.zip ~/Downloads && sudo rm -rf /Applications/whatwatts.app && sudo mv ~/Downloads/whatwatts-apple-silicon.app /Applications/whatwatts.app && sudo xattr -dr com.apple.quarantine /Applications/whatwatts.app && open /Applications/whatwatts.app
 ```
 
 These commands use `sudo` because writing to `/Applications` usually requires an administrator password.
