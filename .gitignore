@@ -1,3 +1,5 @@
 .DS_Store
 build/
 .derived-data/
+.derived-data-arm64/
+dist/

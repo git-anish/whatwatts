@@ -10,6 +10,7 @@
 		4EC9C9E728AB256D009B813B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC9C9E628AB256D009B813B /* AppDelegate.swift */; };
 		4EC9C9E928AB256D009B813B /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC9C9E828AB256D009B813B /* ViewController.swift */; };
 		4EC9C9EB28AB256E009B813B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4EC9C9EA28AB256E009B813B /* Assets.xcassets */; };
+		A1B2C3D4E5F6000000000001 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6000000000002 /* AppIcon.icon */; };
 		4EC9C9EE28AB256E009B813B /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4EC9C9EC28AB256E009B813B /* Main.storyboard */; };
 		4EC9C9F928AB256E009B813B /* WhatWattTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC9C9F828AB256E009B813B /* WhatWattTests.swift */; };
 		4EC9CA0328AB256E009B813B /* WhatWattUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC9CA0228AB256E009B813B /* WhatWattUITests.swift */; };
@@ -39,6 +40,7 @@
 		4EC9C9E628AB256D009B813B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		4EC9C9E828AB256D009B813B /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		4EC9C9EA28AB256E009B813B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1B2C3D4E5F6000000000002 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = file.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		4EC9C9ED28AB256E009B813B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		4EC9C9EF28AB256E009B813B /* WhatWatt.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WhatWatt.entitlements; sourceTree = "<group>"; };
 		4EC9C9F428AB256E009B813B /* WhatWattTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WhatWattTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -102,6 +104,7 @@
 				4EC9C9E628AB256D009B813B /* AppDelegate.swift */,
 				4EC9C9E828AB256D009B813B /* ViewController.swift */,
 				4EC9C9EA28AB256E009B813B /* Assets.xcassets */,
+				A1B2C3D4E5F6000000000002 /* AppIcon.icon */,
 				4EC9C9EC28AB256E009B813B /* Main.storyboard */,
 				4EC9C9EF28AB256E009B813B /* WhatWatt.entitlements */,
 				4EC9CA1228AB25E9009B813B /* main.swift */,
@@ -230,6 +233,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1B2C3D4E5F6000000000001 /* AppIcon.icon in Resources */,
 				4EC9C9EB28AB256E009B813B /* Assets.xcassets in Resources */,
 				4EC9C9EE28AB256E009B813B /* Main.storyboard in Resources */,
 			);

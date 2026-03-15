@@ -153,7 +153,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         alwaysLiveMenuItem = NSMenuItem(title: "Always Live Updates", action: #selector(toggleAlwaysLiveUpdates(_:)), keyEquivalent: "")
         alwaysLiveMenuItem.target = self
 
-        showAdapterWhenUnpluggedMenuItem = NSMenuItem(title: "Show 0W Adapter When Unplugged", action: #selector(toggleShowAdapterWhenUnplugged(_:)), keyEquivalent: "")
+        showAdapterWhenUnpluggedMenuItem = NSMenuItem(title: "Keep showing adapter as 0W when unplugged", action: #selector(toggleShowAdapterWhenUnplugged(_:)), keyEquivalent: "")
         showAdapterWhenUnpluggedMenuItem.target = self
 
         let preferencesItem = NSMenuItem(title: "Preferences...", action: #selector(openPreferences(_:)), keyEquivalent: ",")
@@ -349,7 +349,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             direction = "Near idle"
         }
 
-        return String(format: "Battery: %@ %@%.1f W (%@%.02f A, %.02f V)",
+        return String(format: "Battery: %@ %@ %.1f W (%@%.02f A, %.02f V)",
                       battery.flowSymbol,
                       direction,
                       abs(watts),
@@ -389,7 +389,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func readBatteryInfo() -> BatteryInfo {
-        let batteryEntry = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSmartBattery"))
+        let batteryEntry = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("AppleSmartBattery"))
         guard batteryEntry != IO_OBJECT_NULL else {
             return BatteryInfo(watts: nil,
                                amps: nil,
@@ -457,7 +457,7 @@ private final class PreferencesWindowController: NSWindowController {
     private let onApply: () -> Void
 
     private let alwaysLiveCheckbox = NSButton(checkboxWithTitle: "Always live updates", target: nil, action: nil)
-    private let showAdapterWhenUnpluggedCheckbox = NSButton(checkboxWithTitle: "Show adapter when unplugged", target: nil, action: nil)
+    private let showAdapterWhenUnpluggedCheckbox = NSButton(checkboxWithTitle: "Keep showing adapter as 0W when unplugged", target: nil, action: nil)
 
     private let liveIntervalValueLabel = NSTextField(labelWithString: "")
     private let burstDurationValueLabel = NSTextField(labelWithString: "")
@@ -470,13 +470,15 @@ private final class PreferencesWindowController: NSWindowController {
     init(onApply: @escaping () -> Void) {
         self.onApply = onApply
 
-        let contentRect = NSRect(x: 0, y: 0, width: 440, height: 320)
+        let contentRect = NSRect(x: 0, y: 0, width: 352, height: 252)
         let window = NSWindow(contentRect: contentRect,
                               styleMask: [.titled, .closable],
                               backing: .buffered,
                               defer: false)
         window.title = "whatwatts Settings"
         window.isReleasedWhenClosed = false
+        window.titlebarAppearsTransparent = false
+        window.isMovableByWindowBackground = false
         window.center()
 
         super.init(window: window)
@@ -509,23 +511,18 @@ private final class PreferencesWindowController: NSWindowController {
         alwaysLiveCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
         showAdapterWhenUnpluggedCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
 
-        let titleLabel = NSTextField(labelWithString: "Update behavior")
-        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
-
-        let subtitleLabel = NSTextField(labelWithString: "Fast when charger state changes, quiet when nothing is happening.")
-        subtitleLabel.textColor = .secondaryLabelColor
-        subtitleLabel.lineBreakMode = .byWordWrapping
-        subtitleLabel.maximumNumberOfLines = 2
-
         let displayLabel = sectionLabel("Display")
         let refreshLabel = sectionLabel("Refresh cadence")
 
-        let explanationLabel = NSTextField(labelWithString: "Default mode refreshes every 60 seconds and switches to 1-second updates for 20 seconds after a charger event.")
+        let explanationLabel = NSTextField(labelWithString: "Idle: 60 sec. Charger events: 1 sec for 20 sec.")
         explanationLabel.textColor = .secondaryLabelColor
         explanationLabel.lineBreakMode = .byWordWrapping
-        explanationLabel.maximumNumberOfLines = 3
+        explanationLabel.maximumNumberOfLines = 2
 
-        let displayCard = cardStack([alwaysLiveCheckbox, showAdapterWhenUnpluggedCheckbox])
+        let displayGroup = NSStackView(views: [alwaysLiveCheckbox, showAdapterWhenUnpluggedCheckbox])
+        displayGroup.orientation = .vertical
+        displayGroup.alignment = .leading
+        displayGroup.spacing = 10
 
         let intervalGrid = NSGridView(views: [
             [metricLabel("Live interval"), valueControlRow(label: liveIntervalValueLabel, stepper: liveIntervalStepper)],
@@ -535,8 +532,6 @@ private final class PreferencesWindowController: NSWindowController {
         intervalGrid.rowSpacing = 12
         intervalGrid.columnSpacing = 18
         intervalGrid.yPlacement = .center
-
-        let refreshCard = cardStack([explanationLabel, intervalGrid])
 
         let saveButton = NSButton(title: "Save", target: self, action: #selector(savePreferences(_:)))
         saveButton.bezelStyle = .rounded
@@ -552,21 +547,24 @@ private final class PreferencesWindowController: NSWindowController {
         buttonRow.alignment = .centerY
 
         let content = NSStackView(views: [
-            titleLabel,
-            subtitleLabel,
             displayLabel,
-            displayCard,
+            displayGroup,
+            divider(),
             refreshLabel,
-            refreshCard,
+            explanationLabel,
+            intervalGrid,
             buttonRow,
         ])
         content.orientation = .vertical
         content.alignment = .leading
-        content.spacing = 12
-        content.edgeInsets = NSEdgeInsets(top: 24, left: 24, bottom: 20, right: 24)
+        content.spacing = 10
+        content.edgeInsets = NSEdgeInsets(top: 18, left: 20, bottom: 16, right: 20)
 
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 440, height: 320))
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 352, height: 252))
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         container.addSubview(content)
+
         content.translatesAutoresizingMaskIntoConstraints = false
         spacer.translatesAutoresizingMaskIntoConstraints = false
 
@@ -576,8 +574,7 @@ private final class PreferencesWindowController: NSWindowController {
             content.topAnchor.constraint(equalTo: container.topAnchor),
             content.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor),
             spacer.widthAnchor.constraint(greaterThanOrEqualToConstant: 24),
-            displayCard.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -content.edgeInsets.left - content.edgeInsets.right),
-            refreshCard.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -content.edgeInsets.left - content.edgeInsets.right),
+            explanationLabel.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -content.edgeInsets.left - content.edgeInsets.right),
         ])
 
         return container
@@ -640,40 +637,49 @@ private final class PreferencesWindowController: NSWindowController {
         return label
     }
 
-    private func valueControlRow(label: NSTextField, stepper: NSStepper) -> NSStackView {
-        label.font = .monospacedDigitSystemFont(ofSize: 13, weight: .medium)
+    private func valueControlRow(label: NSTextField, stepper: NSStepper) -> NSView {
+        label.font = .monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
         label.alignment = .right
+        label.textColor = .labelColor
 
         let row = NSStackView(views: [label, stepper])
         row.orientation = .horizontal
         row.spacing = 10
         row.alignment = .centerY
 
-        label.widthAnchor.constraint(equalToConstant: 64).isActive = true
-        return row
-    }
+        label.widthAnchor.constraint(equalToConstant: 74).isActive = true
 
-    private func cardStack(_ views: [NSView]) -> NSView {
-        let stack = NSStackView(views: views)
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 10
-        stack.edgeInsets = NSEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
-
-        let container = NSView()
-        container.wantsLayer = true
-        container.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-        container.layer?.cornerRadius = 12
-        container.addSubview(stack)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
+        let capsule = NSView()
+        capsule.wantsLayer = true
+        capsule.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.95).cgColor
+        capsule.layer?.cornerRadius = 8
+        let borderColor: NSColor
+        if #available(macOS 10.14, *) {
+            borderColor = NSColor.separatorColor.withAlphaComponent(0.3)
+        } else {
+            borderColor = NSColor.gridColor.withAlphaComponent(0.35)
+        }
+        capsule.layer?.borderColor = borderColor.cgColor
+        capsule.layer?.borderWidth = 1
+        capsule.layer?.shadowColor = NSColor.black.withAlphaComponent(0.08).cgColor
+        capsule.layer?.shadowOpacity = 1
+        capsule.layer?.shadowRadius = 4
+        capsule.layer?.shadowOffset = CGSize(width: 0, height: -1)
+        capsule.addSubview(row)
+        row.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: container.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            row.leadingAnchor.constraint(equalTo: capsule.leadingAnchor, constant: 10),
+            row.trailingAnchor.constraint(equalTo: capsule.trailingAnchor, constant: -10),
+            row.topAnchor.constraint(equalTo: capsule.topAnchor, constant: 6),
+            row.bottomAnchor.constraint(equalTo: capsule.bottomAnchor, constant: -6),
         ])
 
-        return container
+        return capsule
+    }
+
+    private func divider() -> NSView {
+        let divider = NSBox()
+        divider.boxType = .separator
+        return divider
     }
 }

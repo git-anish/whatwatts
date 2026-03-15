@@ -1,5 +1,7 @@
 # whatwatts
 
+![whatwatts icon](assets/repo-preview.png)
+
 whatwatts is a lightweight macOS menu bar app for answering one simple question: what is your Mac actually doing right now when you plug in a charger?
 
 It keeps the original WhatWatt idea of showing negotiated adapter wattage, and adds the missing half of the picture: live battery charge and discharge rate.
@@ -12,7 +14,7 @@ Built on top of [SomeInterestingUserName/WhatWatt](https://github.com/SomeIntere
 - Uses a clean title format like `67W | ↑18.4W` while charging and `↓18.4W` when unplugged
 - Defaults to a low-power refresh mode with fast updates only when charger state changes
 - Includes `Always Live Updates` for people who want continuous refreshes
-- Includes `Show 0W adapter when unplugged` if you prefer explicit adapter state in the menu bar
+- Includes `Keep showing adapter as 0W when unplugged` if you prefer explicit adapter state in the menu bar
 - Adds a lightweight `Preferences...` window for tuning update behavior
 - Handles wrapped signed battery current values correctly on Intel Macs
 
