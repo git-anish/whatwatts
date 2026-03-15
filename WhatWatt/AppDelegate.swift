@@ -560,9 +560,16 @@ private final class PreferencesWindowController: NSWindowController {
         content.spacing = 10
         content.edgeInsets = NSEdgeInsets(top: 18, left: 20, bottom: 16, right: 20)
 
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 352, height: 252))
+        let container = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 352, height: 252))
+        if #available(macOS 10.14, *) {
+            container.material = .sidebar
+        } else {
+            container.material = .popover
+        }
+        container.blendingMode = .behindWindow
+        container.state = .active
         container.wantsLayer = true
-        container.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        container.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.62).cgColor
         container.addSubview(content)
 
         content.translatesAutoresizingMaskIntoConstraints = false

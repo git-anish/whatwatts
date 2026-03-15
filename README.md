@@ -32,9 +32,43 @@ That makes it easier to compare chargers, cables, docks, and multi-port power br
 2. Select the `WhatWatt` target.
 3. Build on the machine architecture you want to ship.
 
+For release builds:
+
+- Intel: build on an Intel Mac to produce an `x86_64` app
+- Apple Silicon: build on an Apple Silicon Mac to produce an `arm64` app
+
+This is the supported path for `whatwatts`, and it is the path used for the published release builds.
+
 ### Command Line Tools
 
-On Intel Macs, you can build with `swiftc` and the macOS SDK from Command Line Tools:
+If you want a local development build without opening Xcode, you can build from the command line with Xcode installed:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+xcodebuild \
+  -project WhatWatt.xcodeproj \
+  -scheme WhatWatt \
+  -configuration Release \
+  CODE_SIGNING_ALLOWED=NO \
+  -derivedDataPath .derived-data \
+  build
+```
+
+For an Apple Silicon build:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+xcodebuild \
+  -project WhatWatt.xcodeproj \
+  -scheme WhatWatt \
+  -configuration Release \
+  CODE_SIGNING_ALLOWED=NO \
+  -derivedDataPath .derived-data-arm64 \
+  -arch arm64 \
+  build
+```
+
+The older `swiftc` path still works for a basic Intel build if you only have Command Line Tools:
 
 ```bash
 mkdir -p build/whatwatts.app/Contents/MacOS build/whatwatts.app/Contents/Resources
@@ -48,6 +82,18 @@ swiftc -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk \
 cp WhatWatt/Info.plist build/whatwatts.app/Contents/Info.plist
 codesign --force --deep --sign - build/whatwatts.app
 ```
+
+## Dependencies
+
+`whatwatts` does not use third-party packages.
+
+It depends on:
+
+- macOS 10.13 or newer
+- Xcode for release-quality Intel and Apple Silicon app bundles
+- AppKit/Cocoa and IOKit, both provided by macOS
+
+If you only want the fallback Intel-only `swiftc` build, Command Line Tools are enough.
 
 ## Releases
 
