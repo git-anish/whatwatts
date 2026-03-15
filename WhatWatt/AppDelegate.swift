@@ -722,10 +722,14 @@ private final class PreferencesWindowController: NSWindowController {
         let displayLabel = sectionLabel("Display")
         let refreshLabel = sectionLabel("Refresh cadence")
 
-        let explanationLabel = NSTextField(labelWithString: "Idle: 60 sec. Charger events: 1 sec for 20 sec. System power uses a rolling 60 sec average unless Always live is enabled.")
+        let explanationLabel = NSTextField(wrappingLabelWithString: """
+        Idle: 60 sec
+        Charger events: 1 sec for 20 sec
+        System power: rolling 60 sec average unless Always live is enabled
+        """)
         explanationLabel.textColor = .secondaryLabelColor
         explanationLabel.lineBreakMode = .byWordWrapping
-        explanationLabel.maximumNumberOfLines = 2
+        explanationLabel.maximumNumberOfLines = 4
 
         let displayGroup = NSStackView(views: [
             showAdapterCheckbox,

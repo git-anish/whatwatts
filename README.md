@@ -50,6 +50,25 @@ The SMC system-power readout is an estimate exposed through private Apple interf
 - It may stop working in a future macOS release or on different hardware generations.
 - If it does, adapter and battery readings should continue to work normally.
 
+## Trust and first launch
+
+The full app source is public in this repo, so you can inspect exactly what it does before running it.
+
+`whatwatts` is not notarized because this project is not being shipped under a paid Apple Developer account. That means macOS may block it on first launch until you explicitly allow it.
+
+To open it on macOS:
+
+1. Try to open the app once.
+2. When macOS says it cannot be opened, dismiss the warning.
+3. Open `System Settings > Privacy & Security`.
+4. Scroll down to the `Security` section.
+5. Find the message saying the app was blocked from opening.
+6. Click `Open Anyway`.
+7. Confirm by clicking `Open` in the follow-up dialog.
+
+Apple's guidance for this flow:
+- [Safely open apps on your Mac](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac)
+
 ## Build
 
 ### Xcode
@@ -65,50 +84,6 @@ For release builds:
 
 This is the supported path for `whatwatts`, and it is the path used for the published release builds.
 
-### Command Line Tools
-
-If you want a local development build without opening Xcode, you can build from the command line with Xcode installed:
-
-```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-xcodebuild \
-  -project WhatWatt.xcodeproj \
-  -scheme WhatWatt \
-  -configuration Release \
-  CODE_SIGNING_ALLOWED=NO \
-  -derivedDataPath .derived-data \
-  build
-```
-
-For an Apple Silicon build:
-
-```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-xcodebuild \
-  -project WhatWatt.xcodeproj \
-  -scheme WhatWatt \
-  -configuration Release \
-  CODE_SIGNING_ALLOWED=NO \
-  -derivedDataPath .derived-data-arm64 \
-  -arch arm64 \
-  build
-```
-
-The older `swiftc` path still works for a basic Intel build if you only have Command Line Tools:
-
-```bash
-mkdir -p build/whatwatts.app/Contents/MacOS build/whatwatts.app/Contents/Resources
-swiftc -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk \
-  -framework Cocoa \
-  -framework IOKit \
-  WhatWatt/main.swift \
-  WhatWatt/AppDelegate.swift \
-  WhatWatt/ViewController.swift \
-  -o build/whatwatts.app/Contents/MacOS/whatwatts
-cp WhatWatt/Info.plist build/whatwatts.app/Contents/Info.plist
-codesign --force --deep --sign - build/whatwatts.app
-```
-
 ## Dependencies
 
 `whatwatts` does not use third-party packages.
@@ -118,8 +93,6 @@ It depends on:
 - macOS 10.13 or newer
 - Xcode for release-quality Intel and Apple Silicon app bundles
 - AppKit/Cocoa and IOKit, both provided by macOS
-
-If you only want the fallback Intel-only `swiftc` build, Command Line Tools are enough.
 
 ## Releases
 
