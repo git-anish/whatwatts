@@ -3,3 +3,6 @@ build/
 .derived-data/
 .derived-data-arm64/
 dist/
+*.dSYM
+*.xcuserstate
+WhatWatt.xcodeproj/xcuserdata/
