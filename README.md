@@ -40,7 +40,7 @@ That makes it easier to compare chargers, cables, docks, and multi-port power br
 
 The optional system-power estimate came from looking at how [SAP Power Monitor](https://github.com/SAP/power-monitoring-tool-for-macos) approaches the same problem. `whatwatts` now reads the same class of private SMC value to expose a lightweight "how hard is the machine pulling right now?" estimate alongside charger and battery data.
 
-In low-power mode, the SMC value is shown as a rolling 60-second average. If you want faster 1-second updates, enable `Always Live Updates`.
+In low-power mode, the app checks infrequently to stay lightweight. After plugging or unplugging a charger, it updates once a second for 20 seconds. The SMC system-power value is shown as a 60-second average unless `Always Live Updates` is enabled.
 
 ## SMC system power note
 

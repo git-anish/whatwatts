@@ -723,9 +723,9 @@ private final class PreferencesWindowController: NSWindowController {
         let refreshLabel = sectionLabel("Refresh cadence")
 
         let explanationLabel = NSTextField(wrappingLabelWithString: """
-        Idle: 60 sec
-        Charger events: 1 sec for 20 sec
-        System power: rolling 60 sec average unless Always live is enabled
+        Idle: checks once a minute to stay lightweight
+        After plugging or unplugging a charger: updates once a second for 20 seconds
+        System power: shown as a 60-second average unless Always live is enabled
         """)
         explanationLabel.textColor = .secondaryLabelColor
         explanationLabel.lineBreakMode = .byWordWrapping
