@@ -478,7 +478,10 @@ private final class PreferencesWindowController: NSWindowController {
         window.title = "whatwatts Settings"
         window.isReleasedWhenClosed = false
         window.titlebarAppearsTransparent = false
+        window.titleVisibility = .visible
         window.isMovableByWindowBackground = false
+        window.isOpaque = false
+        window.backgroundColor = NSColor(calibratedWhite: 0.97, alpha: 0.94)
         window.center()
 
         super.init(window: window)
@@ -510,6 +513,14 @@ private final class PreferencesWindowController: NSWindowController {
 
         alwaysLiveCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
         showAdapterWhenUnpluggedCheckbox.font = .systemFont(ofSize: 13, weight: .medium)
+
+        let iconView = NSImageView(image: NSApp.applicationIconImage)
+        iconView.imageScaling = .scaleProportionallyUpOrDown
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            iconView.widthAnchor.constraint(equalToConstant: 28),
+            iconView.heightAnchor.constraint(equalToConstant: 28),
+        ])
 
         let displayLabel = sectionLabel("Display")
         let refreshLabel = sectionLabel("Refresh cadence")
@@ -547,6 +558,7 @@ private final class PreferencesWindowController: NSWindowController {
         buttonRow.alignment = .centerY
 
         let content = NSStackView(views: [
+            iconView,
             displayLabel,
             displayGroup,
             divider(),
@@ -562,14 +574,14 @@ private final class PreferencesWindowController: NSWindowController {
 
         let container = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 352, height: 252))
         if #available(macOS 10.14, *) {
-            container.material = .sidebar
+            container.material = .underWindowBackground
         } else {
             container.material = .popover
         }
         container.blendingMode = .behindWindow
         container.state = .active
         container.wantsLayer = true
-        container.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.62).cgColor
+        container.layer?.backgroundColor = NSColor(calibratedWhite: 0.97, alpha: 0.86).cgColor
         container.addSubview(content)
 
         content.translatesAutoresizingMaskIntoConstraints = false
